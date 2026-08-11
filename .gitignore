@@ -1,0 +1,22 @@
+# Keil MDK-ARM 编译产物
+MDK-ARM/0811_stm32f4/
+MDK-ARM/*.lst
+MDK-ARM/startup_*.lst
+
+# Keil 用户界面状态(因人而异,可不入库)
+MDK-ARM/*.uvguix.*
+
+# 链接/调试生成物
+*.axf
+*.hex
+*.map
+*.dep
+*.lnp
+*.htm
+*.crf
+*.o
+*.d
+*.sct
+
+# CubeMX 本地文件
+.mxproject
