@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "can.h"
 #include "dma.h"
 #include "tim.h"
 #include "usart.h"
@@ -30,6 +31,8 @@
 #include "buzzer.h"
 #include <math.h>
 #include <string.h>
+#include "can_irq.h"
+#include "can_app.h"
 
 /* USER CODE END Includes */
 
@@ -66,11 +69,13 @@ void SystemClock_Config(void);
 static void UART_Send_Sine(void)
 {
   uint8_t frame[8];
-  float   val = sinf(2.0f * 3.14f * (HAL_GetTick() % 2000) / 2000.0f);
+  float val = sinf(2.0f * 3.14f * (HAL_GetTick() % 2000) / 2000.0f);
 
-  memcpy(&frame[0], &val, 4);  
-  frame[4] = 0x00; frame[5] = 0x00; 
-  frame[6] = 0x80; frame[7] = 0x7F;
+  memcpy(&frame[0], &val, 4);
+  frame[4] = 0x00;
+  frame[5] = 0x00;
+  frame[6] = 0x80;
+  frame[7] = 0x7F;
 
   HAL_UART_Transmit(&huart1, frame, sizeof(frame), 100);
 }
@@ -110,9 +115,12 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM2_Init();
   MX_USART1_UART_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
   app_init();
   UART_Start_Receive();
+  can_app_init();
+  CAN_Start();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,6 +131,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     app_run();
+    can_app_run();
     if (beep_count > 0)
     {
       uint8_t n = beep_count;
