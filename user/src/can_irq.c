@@ -1,7 +1,5 @@
 #include "can_irq.h"
-
-#define CAN_ID_BEEP_CMD 0x01020101U
-#define CAN_ID_FLOW_CMD 0x01020201U
+#include "breath_led.h"
 
 volatile uint8_t can_beep_cnt = 0;
 volatile int8_t can_flow_cmd = -1;
@@ -34,18 +32,4 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx, data) != HAL_OK)
         return;
 
-    if (rx.IDE == CAN_ID_EXT)
-    {
-        if (rx.ExtId == CAN_ID_BEEP_CMD && rx.DLC >= 1)
-            can_beep_cnt = data[0];
-        else if (rx.ExtId == CAN_ID_FLOW_CMD && rx.DLC >= 1)
-            can_flow_cmd = (data[0] == 0U) ? 0 : 1;
-    }
-    if(rx.IDE == CAN_ID_STD)
-    {
-        if(rx.StdId == CAN_ID_MASTER_CTRL&& rx.DLC >= 1)
-        {
-            update_breath_led_control(data[0]);
-        }
-    }
 }

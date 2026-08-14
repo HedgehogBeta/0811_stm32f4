@@ -54,54 +54,41 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
-  /*过滤器1*/
+  /* 过滤器配置:按主/从板分别接收所需 ID*/
   CAN_FilterTypeDef CAN_FilterConfig = {0};
   CAN_FilterConfig.FilterActivation = ENABLE;
   CAN_FilterConfig.SlaveStartFilterBank = 14;
+  CAN_FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  CAN_FilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
+  CAN_FilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
   CAN_FilterConfig.FilterBank = 0;
-  CAN_FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  CAN_FilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
-  CAN_FilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-  /* 扩展帧: id<<3 | ide(4), 再拆高低16位 */
-  CAN_FilterConfig.FilterIdHigh = (uint16_t)(((0x01020101U << 3U) | 0x4U) >> 16U);
-  CAN_FilterConfig.FilterIdLow = (uint16_t)(((0x01020101U << 3U) | 0x4U) & 0xFFFFU);
-  CAN_FilterConfig.FilterMaskIdHigh = (uint16_t)(((0x01020201U << 3U) | 0x4U) >> 16U);
-  CAN_FilterConfig.FilterMaskIdLow = (uint16_t)(((0x01020201U << 3U) | 0x4U) & 0xFFFFU);
-  if (HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /*过滤器2*/
-    CAN_FilterTypeDef CAN_FilterConfig = {0};
-  CAN_FilterConfig.FilterActivation = ENABLE;
-  CAN_FilterConfig.SlaveStartFilterBank = 14;
-  CAN_FilterConfig.FilterBank = 1;
-  CAN_FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-  CAN_FilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
-  CAN_FilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-  /* 扩展帧: id<<3 | ide(4), 再拆高低16位 */
-  CAN_FilterConfig.FilterIdHigh = (uint16_t)(((CAN_BREATH_ON << 3U) | 0x4U) >> 16U);
-  CAN_FilterConfig.FilterIdLow = (uint16_t)(((CAN_BREATH_ON << 3U) | 0x4U) & 0xFFFFU);
-  CAN_FilterConfig.FilterMaskIdHigh = (uint16_t)(((0x01020201U << 3U) | 0x4U) >> 16U);
-  CAN_FilterConfig.FilterMaskIdLow = (uint16_t)(((0x01020201U << 3U) | 0x4U) & 0xFFFFU);
+#if BOARD_MASTER
+  CAN_FilterConfig.FilterIdHigh = (uint16_t)(((CAN_ID_SLAVE_FEEDBACK << 3U) | 0x4U) >> 16U);
+  CAN_FilterConfig.FilterIdLow = (uint16_t)(((CAN_ID_SLAVE_FEEDBACK << 3U) | 0x4U) & 0xFFFFU);
+  CAN_FilterConfig.FilterMaskIdHigh = (uint16_t)(((CAN_BEEP_ID_CMD << 3U) | 0x4U) >> 16U);
+  CAN_FilterConfig.FilterMaskIdLow = (uint16_t)(((CAN_BEEP_ID_CMD << 3U) | 0x4U) & 0xFFFFU);
+#else
+  CAN_FilterConfig.FilterIdHigh = (uint16_t)((CAN_ID_MASTER_CTRL << 21U) >> 16U);
+  CAN_FilterConfig.FilterIdLow = (uint16_t)((CAN_ID_MASTER_CTRL << 21U) & 0x1FFFU);
+  CAN_FilterConfig.FilterMaskIdHigh = (uint16_t)(((CAN_BEEP_ID_CMD << 3U) | 0x4U) >> 16U);
+  CAN_FilterConfig.FilterMaskIdLow = (uint16_t)(((CAN_BEEP_ID_CMD << 3U) | 0x4U) & 0xFFFFU);
+#endif
   if (HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterConfig) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE END CAN1_Init 2 */
-
 }
 
-void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
+void HAL_CAN_MspInit(CAN_HandleTypeDef *canHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-  if(canHandle->Instance==CAN1)
+  if (canHandle->Instance == CAN1)
   {
-  /* USER CODE BEGIN CAN1_MspInit 0 */
+    /* USER CODE BEGIN CAN1_MspInit 0 */
 
-  /* USER CODE END CAN1_MspInit 0 */
+    /* USER CODE END CAN1_MspInit 0 */
     /* CAN1 clock enable */
     __HAL_RCC_CAN1_CLK_ENABLE();
 
@@ -110,7 +97,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     PA11     ------> CAN1_RX
     PA12     ------> CAN1_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
+    GPIO_InitStruct.Pin = GPIO_PIN_11 | GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -124,20 +111,20 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
     HAL_NVIC_SetPriority(CAN1_RX1_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(CAN1_RX1_IRQn);
-  /* USER CODE BEGIN CAN1_MspInit 1 */
+    /* USER CODE BEGIN CAN1_MspInit 1 */
 
-  /* USER CODE END CAN1_MspInit 1 */
+    /* USER CODE END CAN1_MspInit 1 */
   }
 }
 
-void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
+void HAL_CAN_MspDeInit(CAN_HandleTypeDef *canHandle)
 {
 
-  if(canHandle->Instance==CAN1)
+  if (canHandle->Instance == CAN1)
   {
-  /* USER CODE BEGIN CAN1_MspDeInit 0 */
+    /* USER CODE BEGIN CAN1_MspDeInit 0 */
 
-  /* USER CODE END CAN1_MspDeInit 0 */
+    /* USER CODE END CAN1_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_CAN1_CLK_DISABLE();
 
@@ -145,19 +132,18 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
     PA11     ------> CAN1_RX
     PA12     ------> CAN1_TX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11|GPIO_PIN_12);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11 | GPIO_PIN_12);
 
     /* CAN1 interrupt Deinit */
     HAL_NVIC_DisableIRQ(CAN1_TX_IRQn);
     HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
     HAL_NVIC_DisableIRQ(CAN1_RX1_IRQn);
-  /* USER CODE BEGIN CAN1_MspDeInit 1 */
+    /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
-  /* USER CODE END CAN1_MspDeInit 1 */
+    /* USER CODE END CAN1_MspDeInit 1 */
   }
 }
 
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */
-

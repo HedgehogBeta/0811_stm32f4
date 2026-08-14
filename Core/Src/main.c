@@ -141,22 +141,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    app_run();
-    can_app_run();
-    if (beep_count > 0)
-    {
-      uint8_t n = beep_count;
-      beep_count = 0;
-      for (uint8_t i = 0; i < n; i++)
-      {
-        buzzer_beep(150u);
-        HAL_Delay(160u);
-        buzzer_update();
-        HAL_Delay(150u);
-      }
-
-      // HAL_GPIO_WritePin(GPIOA, LED_1_Pin, GPIO_PIN_SET); //测试
-    }
 
     UART_Send_Sine();
     HAL_Delay(10);
