@@ -20,6 +20,7 @@ static void heartbeat_task(void *arg)
 {
     for (;;)
     {
+        
     }
 }
 
@@ -28,6 +29,8 @@ static void breath_task(void *arg)
 {
     for (;;)
     {
+        breath_led_update();
+        osDelay(10);
     }
 }
 
@@ -36,6 +39,8 @@ static void buzzer_task(void *arg)
 {
     for (;;)
     {
+        can_app_run();//蜂鸣器响报文指定次数
+        osDelay(10);
     }
 }
 
@@ -48,6 +53,9 @@ static void can_rx_task(void *arg)
         /* 主板: 蜂鸣 + 转发float打波 */
 #else
         /* 从板: 蜂鸣 + 收0x012控呼吸 */
+        CAN_Start();
+        breath_led_control();
+        osDelay(10);
 #endif
     }
 }
@@ -81,4 +89,5 @@ void app_tasks_create(void)
 #if BOARD_MASTER
     /* 仅主板: vofa队列/任务 */
 #endif
+
 }

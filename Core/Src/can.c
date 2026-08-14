@@ -21,7 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "protocol.h"
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan1;
@@ -65,6 +65,24 @@ void MX_CAN1_Init(void)
   /* 扩展帧: id<<3 | ide(4), 再拆高低16位 */
   CAN_FilterConfig.FilterIdHigh = (uint16_t)(((0x01020101U << 3U) | 0x4U) >> 16U);
   CAN_FilterConfig.FilterIdLow = (uint16_t)(((0x01020101U << 3U) | 0x4U) & 0xFFFFU);
+  CAN_FilterConfig.FilterMaskIdHigh = (uint16_t)(((0x01020201U << 3U) | 0x4U) >> 16U);
+  CAN_FilterConfig.FilterMaskIdLow = (uint16_t)(((0x01020201U << 3U) | 0x4U) & 0xFFFFU);
+  if (HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /*过滤器2*/
+    CAN_FilterTypeDef CAN_FilterConfig = {0};
+  CAN_FilterConfig.FilterActivation = ENABLE;
+  CAN_FilterConfig.SlaveStartFilterBank = 14;
+  CAN_FilterConfig.FilterBank = 1;
+  CAN_FilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+  CAN_FilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
+  CAN_FilterConfig.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+  /* 扩展帧: id<<3 | ide(4), 再拆高低16位 */
+  CAN_FilterConfig.FilterIdHigh = (uint16_t)(((CAN_BREATH_ON << 3U) | 0x4U) >> 16U);
+  CAN_FilterConfig.FilterIdLow = (uint16_t)(((CAN_BREATH_ON << 3U) | 0x4U) & 0xFFFFU);
   CAN_FilterConfig.FilterMaskIdHigh = (uint16_t)(((0x01020201U << 3U) | 0x4U) >> 16U);
   CAN_FilterConfig.FilterMaskIdLow = (uint16_t)(((0x01020201U << 3U) | 0x4U) & 0xFFFFU);
   if (HAL_CAN_ConfigFilter(&hcan1, &CAN_FilterConfig) != HAL_OK)
