@@ -77,13 +77,23 @@ static void buzzer_task(void *arg)
 static void can_rx_task(void *arg)
 {
     CanMsg_t msg;
+
     for (;;)
     {
+        if (osMessageQueueGet(can_rx_queue, &msg, NULL, osWaitForever) != osOK)
+            continue;
+
+        /* 蜂鸣命令: 主从板都响应 */
+        if (msg.ide == CAN_ID_EXT && msg.id == CAN_BEEP_ID_CMD && msg.dlc >= 1)
+        {
+            uint8_t n = msg.data[0];
+            osMessageQueuePut(beep_queue, &n, 0, 0); //入队
+        }
 #if BOARD_MASTER
-        /* 主板: 蜂鸣 + 转发float打波 */
+        /* 主板: 转发float打波 */
 
 #else
-        /* 从板: 蜂鸣 + 收0x012控呼吸 */
+        /* 从板: 收0x012控呼吸 */
         CAN_Start();
         CanMsg_t Msg;
         BreathCtrl_t Ctrl_t;
@@ -142,5 +152,4 @@ void app_tasks_create(void)
 #if BOARD_MASTER
     osThreadNew(vofa_rx_task, NULL, &s_vofarx_attr);
 #endif
-
 }

@@ -3,10 +3,9 @@
 
 #include "main.h"
 #include "usart.h"
-#include <string.h>
-#include "breath_led.h"
 
 void UART_Start_Receive(void);
-extern volatile uint8_t beep_count;
+void UART_Send_Float(float val);// 打波
+void UART_Send_Log(const char *s, uint16_t len);//log输出参数
 
 #endif

@@ -2,9 +2,11 @@
 #include "protocol.h"
 #include "cmsis_os2.h"
 #include <string.h>
+#include "breath_led.h"
 
 #define CAN_ID_BEEP_CMD 0x01020101U
 #define CAN_ID_FLOW_CMD 0x01020201U
+
 
 volatile uint8_t can_beep_cnt = 0;
 volatile int8_t can_flow_cmd = -1;
