@@ -17,6 +17,10 @@ extern "C" {
 void breath_led_init(void);   /* 启动 PWM,占空比 0(灭) */
 void breath_led_update(void); /* 主循环周期调用,更新占空比实现呼吸 */
 void breath_led_off(void);    /* 占空比 0(灭) */
+void update_breath_led_control(uint8_t new_control);
+void breath_led_control(void);
+
+uint32_t update_breath_led_period(uint32_t new_breath_led_period);
 
 #ifdef __cplusplus
 }

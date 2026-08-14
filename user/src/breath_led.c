@@ -11,6 +11,41 @@
 
 #define BREATH_PERIOD_MS    2000u   /* 一个呼吸周期(暗->亮->暗) */
 #define PWM_MAX             1000u   /* TIM3 计数周期 = ARR + 1 */
+static uint32_t Breath_Period_Ms = BREATH_PERIOD_MS;
+static uint8_t Breath_Led_State = 0;
+
+static uint32_t get_breath_led_period(void)
+{
+    return Breath_Period_Ms;
+}
+
+void update_breath_led_control(uint8_t new_control)
+{
+    Breath_Led_State = new_control;
+}
+
+void breath_led_control(void)
+{
+    switch(Breath_Led_State)
+    {
+        case 0:
+            breath_led_off();
+            break;
+        case 1:
+            breath_led_update();
+            break;
+    }
+}
+
+uint32_t update_breath_led_period(uint32_t new_breath_led_period)
+{
+    if(new_breath_led_period<=BREATH_PERIOD_MS)
+    Breath_Period_Ms = new_breath_led_period;
+    else
+    {   
+        Breath_Period_Ms=BREATH_PERIOD_MS;
+    }
+}
 
 void breath_led_init(void)
 {
@@ -23,13 +58,14 @@ void breath_led_init(void)
 
 void breath_led_update(void)
 {
-    uint32_t phase = HAL_GetTick() % BREATH_PERIOD_MS;
+    uint32_t period = get_breath_led_period();
+    uint32_t phase = HAL_GetTick() % period;
     uint32_t duty;
 
-    if (phase <= (BREATH_PERIOD_MS / 2u)) {
-        duty = (phase * 2u * PWM_MAX) / BREATH_PERIOD_MS;
+    if (phase <= (period / 2u)) {
+        duty = (phase * 2u * PWM_MAX) / period;
     } else {
-        duty = ((BREATH_PERIOD_MS - phase) * 2u * PWM_MAX) / BREATH_PERIOD_MS;
+        duty = ((period - phase) * 2u * PWM_MAX) / period;
     }
 
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, duty);

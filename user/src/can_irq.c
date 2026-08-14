@@ -41,4 +41,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
         else if (rx.ExtId == CAN_ID_FLOW_CMD && rx.DLC >= 1)
             can_flow_cmd = (data[0] == 0U) ? 0 : 1;
     }
+    if(rx.IDE == CAN_ID_STD)
+    {
+        if(rx.StdId == CAN_ID_MASTER_CTRL&& rx.DLC >= 1)
+        {
+            update_breath_led_control(data[0]);
+        }
+    }
 }

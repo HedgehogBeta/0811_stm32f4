@@ -8,13 +8,15 @@
 
 /* ============ 配置切换 ============ */
 #ifndef BOARD_MASTER
-#define BOARD_MASTER  1    /* 1=主板, 0=从板 */
+#define BOARD_MASTER  0    /* 1=主板, 0=从板 */
 #endif
 
 #include "main.h"
 #define CAN_ID_MASTER_CTRL    0x012U
 #define CAN_ID_SLAVE_FEEDBACK 0x02010101U
 #define CAN_BEEP_ID_CMD       0x01020101U
+
+//#define UART_BREATH_HEADER 0xee
 
 typedef struct {
     uint8_t onoff;        /* 0=关 1=开 */

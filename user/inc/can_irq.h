@@ -2,6 +2,7 @@
 #define __CAN_IRQ_H
 #include "main.h"
 #include "can.h"
+#include "protocol.h"
 
 void CAN_Start(void);                       /* 启动CAN+开FIFO0接收中断 */
 void CAN_Send(uint32_t ext_id, uint8_t dlc, uint8_t *data);
