@@ -13,6 +13,20 @@
 
 #define CAN_ID_MASTER_CTRL    0x012U
 #define CAN_ID_SLAVE_FEEDBACK 0x02010101U
+#define CAN_BEEP_ID_CMD       0x01020101U
+
+typedef struct {
+    uint8_t onoff;        /* 0=关 1=开 */
+    uint8_t period_code;  /* 周期码 */
+} BreathCtrl_t;
+
+/* 从 CAN 中断投递到任务队列的一条消息 */
+typedef struct {
+    uint8_t  ide; 
+    uint32_t id;          
+    uint8_t  dlc;
+    uint8_t  data[8];
+} CanMsg_t;
 
 
 #endif /* __PROTOCOL_H */

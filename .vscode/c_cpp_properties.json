@@ -20,6 +20,8 @@
                 "d:\\C\\File\\26.8px\\8.11\\0811_stm32f4\\Core\\Src",
                 "d:\\C\\File\\26.8px\\8.11\\0811_stm32f4\\Drivers\\STM32F4xx_HAL_Driver\\Src",
                 "d:\\C\\File\\26.8px\\8.11\\0811_stm32f4\\user\\src",
+                "d:\\C\\File\\26.8px\\8.11\\0811_stm32f4\\Middlewares\\Third_Party\\FreeRTOS\\Source",
+                "d:\\C\\File\\26.8px\\8.11\\0811_stm32f4\\Middlewares\\Third_Party\\FreeRTOS\\Source\\portable\\MemMang",
                 "${default}"
             ],
             "defines": [
