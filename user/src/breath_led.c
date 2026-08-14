@@ -37,7 +37,7 @@ void breath_led_control(void)
     }
 }
 
-uint32_t update_breath_led_period(uint32_t new_breath_led_period)
+void update_breath_led_period(uint32_t new_breath_led_period)
 {
     if(new_breath_led_period<=BREATH_PERIOD_MS)
     Breath_Period_Ms = new_breath_led_period;

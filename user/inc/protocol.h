@@ -20,7 +20,7 @@
 
 typedef struct {
     uint8_t onoff;        /* 0=关 1=开 */
-    uint8_t period_code;  /* 周期码 */
+    uint32_t period;  /* 周期码 */
 } BreathCtrl_t;
 
 /* 从 CAN 中断投递到任务队列的一条消息 */

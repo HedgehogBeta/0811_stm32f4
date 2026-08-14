@@ -24,6 +24,14 @@ static const osThreadAttr_t s_buzzer_attr = {.name = "buzzer", .stack_size = 256
 static const osThreadAttr_t s_vofarx_attr = {.name = "vofa_rx", .stack_size = 384, .priority = osPriorityNormal};
 #endif
 
+
+
+void CAN_RX_Queue_Put(CanMsg_t* Msg)
+{
+    osMessageQueuePut(can_rx_queue,Msg,NULL,osWaitForever);
+}
+
+
 /* 心跳: LED1/2 交替闪烁 */
 static void heartbeat_task(void *arg)
 {
@@ -77,6 +85,17 @@ static void can_rx_task(void *arg)
 #else
         /* 从板: 蜂鸣 + 收0x012控呼吸 */
         CAN_Start();
+        CanMsg_t Msg;
+        BreathCtrl_t Ctrl_t;
+        osMessageQueueGet(can_rx_queue,&Msg,NULL,osWaitForever);
+        if(Msg.id == 0x012&&Msg.dlc>=1)
+        {
+            Ctrl_t.onoff = Msg.data[0];
+            update_breath_led_control(Ctrl_t.onoff);
+            Ctrl_t.period = Msg.data[1]*100+Msg.data[2];
+            update_breath_led_period(Ctrl_t.period);     
+        }
+
         breath_led_control();
         osDelay(10);
 #endif
