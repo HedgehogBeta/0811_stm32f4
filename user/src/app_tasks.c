@@ -12,7 +12,16 @@
 osMessageQueueId_t can_rx_queue;
 osMessageQueueId_t beep_queue;
 #if BOARD_MASTER
-osMessageQueueId_t vofa_cmd_queue;   /* 仅主板 */
+osMessageQueueId_t vofa_cmd_queue; /* 仅主板 */
+#endif
+
+static const osThreadAttr_t s_heartbeat_attr = {.name = "heartbeat", .stack_size = 256, .priority = osPriorityNormal};
+static const osThreadAttr_t s_breath_attr = {.name = "breath", .stack_size = 256, .priority = osPriorityNormal};
+static const osThreadAttr_t s_canrx_attr = {.name = "can_rx", .stack_size = 256, .priority = osPriorityNormal};
+static const osThreadAttr_t s_cantx_attr = {.name = "can_tx", .stack_size = 256, .priority = osPriorityNormal};
+static const osThreadAttr_t s_buzzer_attr = {.name = "buzzer", .stack_size = 256, .priority = osPriorityNormal};
+#if BOARD_MASTER
+static const osThreadAttr_t s_vofarx_attr = {.name = "vofa_rx", .stack_size = 384, .priority = osPriorityNormal};
 #endif
 
 /* 心跳: LED1/2 交替闪烁 */
@@ -20,6 +29,8 @@ static void heartbeat_task(void *arg)
 {
     for (;;)
     {
+        flow_led_update();
+        osDelay(10);
     }
 }
 
@@ -28,24 +39,41 @@ static void breath_task(void *arg)
 {
     for (;;)
     {
+        breath_led_update();
+        osDelay(10);
     }
 }
 
 /* 蜂鸣器定次数响应 */
 static void buzzer_task(void *arg)
 {
+    uint8_t n;
     for (;;)
     {
+        if (osMessageQueueGet(beep_queue, &n, NULL, osWaitForever) != osOK)
+        {
+            continue;
+        }
+        for (uint8_t i = 0; i < n; i++)
+        {
+            buzzer_beep(150u);
+            osDelay(150u);
+            buzzer_update;
+            osDelay(150u);
+        }
+        buzzer_off();
     }
 }
 
 /* CAN接收处理(主从分支) */
 static void can_rx_task(void *arg)
 {
+    CanMsg_t msg;
     for (;;)
     {
 #if BOARD_MASTER
         /* 主板: 蜂鸣 + 转发float打波 */
+
 #else
         /* 从板: 蜂鸣 + 收0x012控呼吸 */
 #endif
@@ -78,7 +106,18 @@ static void vofa_rx_task(void *arg)
 /* 创建任务与队列(在freertos.c调用) */
 void app_tasks_create(void)
 {
+    can_rx_queue = osMessageQueueNew(8, sizeof(CanMsg_t), NULL);
+    beep_queue = osMessageQueueNew(8, sizeof(uint8_t), NULL);
 #if BOARD_MASTER
-    /* 仅主板: vofa队列/任务 */
+    vofa_cmd_queue = osMessageQueueNew(4, sizeof(BreathCtrl_t), NULL);
+#endif
+
+    osThreadNew(heartbeat_task, NULL, &s_heartbeat_attr);
+    osThreadNew(breath_task, NULL, &s_breath_attr);
+    osThreadNew(can_rx_task, NULL, &s_canrx_attr);
+    osThreadNew(can_tx_task, NULL, &s_cantx_attr);
+    osThreadNew(buzzer_task, NULL, &s_buzzer_attr);
+#if BOARD_MASTER
+    osThreadNew(vofa_rx_task, NULL, &s_vofarx_attr);
 #endif
 }
