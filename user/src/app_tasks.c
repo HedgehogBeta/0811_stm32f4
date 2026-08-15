@@ -58,7 +58,7 @@ static void buzzer_task(void *arg)
         {
             buzzer_beep(150u);
             osDelay(150u);
-            buzzer_update;
+            buzzer_update();
             osDelay(150u);
         }
         buzzer_off();
@@ -82,16 +82,20 @@ static void can_rx_task(void *arg)
             osMessageQueuePut(beep_queue, &n, 0, 0); // 入队
         }
 #if BOARD_MASTER
-        /* 主板: 转发float打波 */
-        float val;
-        memcpy(&val, msg.data, 4);
-        UART_Send_Float(val);
-
+        /* 主板: 只转发从板反馈帧 0x02010101 */
+        if (msg.id == CAN_ID_SLAVE_FEEDBACK && msg.dlc >= 4)
+        {
+            float val;
+            memcpy(&val, msg.data, 4);
+            UART_Send_Float(val);
+        }
 #else
-        /* 从板: 收0x012控呼吸 */
-        CAN_Start();
-        breath_led_control();
-        osDelay(10);
+        /* 从板: 只处理主板呼吸控制帧 0x012 */
+        if (msg.ide == CAN_ID_STD && msg.id == CAN_ID_MASTER_CTRL && msg.dlc >= 2)
+        {
+            update_breath_led_control(msg.data[0]);   /* 开关 */
+            update_breath_led_period((uint32_t)msg.data[1] * 100u);  /* 周期 */
+        }
 #endif
     }
 }
