@@ -105,35 +105,18 @@ static void can_rx_task(void *arg)
             osMessageQueuePut(beep_queue, &n, 0, 0); // 入队
         }
 #if BOARD_MASTER
-        /* 主板: 只转发从板反馈帧 0x02010101 */
-        if (msg.id == CAN_ID_SLAVE_FEEDBACK && msg.dlc >= 4)
-        {
+        /* 主板: 收到从板 100Hz float → 打波到 VOFA */
+        else if (msg.ide == CAN_ID_EXT && msg.id == CAN_ID_SLAVE_FEEDBACK && msg.dlc >= 4) {
             float val;
             memcpy(&val, msg.data, 4);
             UART_Send_Float(val);
         }
 #else
-        /* 从板: 只处理主板呼吸控制帧 0x012 */
-        if (msg.ide == CAN_ID_STD && msg.id == CAN_ID_MASTER_CTRL && msg.dlc >= 2)
-        {
-            update_breath_led_control(msg.data[0]);   /* 开关 */
-            update_breath_led_period((uint32_t)msg.data[1] * 100u);  /* 周期 */
+        /* 从板: 收到主板呼吸控制 → 更新本地呼吸灯 */
+        else if (msg.ide == CAN_ID_STD && msg.id == CAN_ID_MASTER_CTRL && msg.dlc >= 2) {
+            breath_led_set_enable(msg.data[0]);
+            breath_led_set_period((uint16_t)msg.data[1] * 100u);
         }
-        /* 从板: 收0x012控呼吸 */
-        CAN_Start();
-        CanMsg_t Msg;
-        BreathCtrl_t Ctrl_t;
-        osMessageQueueGet(can_rx_queue,&Msg,NULL,osWaitForever);
-        if(Msg.id == 0x012&&Msg.dlc>=1)
-        {
-            Ctrl_t.onoff = Msg.data[0];
-            update_breath_led_control(Ctrl_t.onoff);
-            Ctrl_t.period_code = Msg.data[1]*100+Msg.data[2];
-            update_breath_led_period(Ctrl_t.period_code);     
-        }
-
-        breath_led_control();
-        osDelay(10);
 #endif
     }
 }
