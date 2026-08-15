@@ -3,6 +3,7 @@
 #include "cmsis_os2.h"
 #include <string.h>
 #include "breath_led.h"
+#include "app_tasks.h"
 
 #define CAN_ID_BEEP_CMD 0x01020101U
 #define CAN_ID_FLOW_CMD 0x01020201U
@@ -53,6 +54,6 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     {
         Msg.id=rx.ExtId;
     }
-    CAN_RX_Queue_Put(&Msg);
+    osMessageQueuePut(can_rx_queue, &Msg, 0, 0);
 
 }
