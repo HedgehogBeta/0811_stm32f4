@@ -36,6 +36,8 @@ osMessageQueueId_t beep_queue;
 osMessageQueueId_t vofa_cmd_queue; /* 仅主板 */
 #endif
 
+static uint8_t s_period_code = 1;  /* 主板最近一次 VOFA 周期码,供 CAN 转发给从板 */
+
 static const osThreadAttr_t s_heartbeat_attr = {.name = "heartbeat", .stack_size = 256, .priority = osPriorityNormal};
 static const osThreadAttr_t s_breath_attr = {.name = "breath", .stack_size = 256, .priority = osPriorityNormal};
 static const osThreadAttr_t s_canrx_attr = {.name = "can_rx", .stack_size = 256, .priority = osPriorityNormal};
@@ -111,14 +113,10 @@ static void can_rx_task(void *arg)
             UART_Send_Float(val);
         }
 #else
-        /* 从板: 收0x012控呼吸 */
-        BreathCtrl_t Ctrl_t;
-        if(msg.id == 0x012&&msg.dlc>=1)
-        {
-            Ctrl_t.onoff = msg.data[0];
-            update_breath_led_control(Ctrl_t.onoff);
-            Ctrl_t.period_code = msg.data[1]*100+msg.data[2];
-            update_breath_led_period(Ctrl_t.period_code);     
+        /* 从板: 收到主板呼吸控制 → 更新本地呼吸灯 */
+        else if (msg.ide == CAN_ID_STD && msg.id == CAN_ID_MASTER_CTRL && msg.dlc >= 2) {
+            update_breath_led_control(msg.data[0]);
+            update_breath_led_period((uint32_t)msg.data[1] * 100u);
         }
 #endif
     }
@@ -127,25 +125,21 @@ static void can_rx_task(void *arg)
 /* CAN周期发送(主从分支) */
 static void can_tx_task(void *arg)
 {
-    PeriodicControl_t pct = {0};
-    PeriodicControl_Init(&pct,10);//防周期性漂移计时10ms
+    uint8_t d[4];
     for (;;)
     {
-        uint8_t d[4];
 #if BOARD_MASTER
-        /* 主板: 每50ms发0x012 */
+        /* 主板: 每50ms发0x012控制帧(标准帧) */
         d[0] = get_breath_led_control();
-        d[1] = get_breath_led_period();
+        d[1] = s_period_code;
         CAN_Send(CAN_ID_STD, CAN_ID_MASTER_CTRL, 2, d);
         osDelay(50);
 #else
-        /* 从板: 每10ms发100Hz float */
+        /* 从板: 每10ms发100Hz float反馈(扩展帧) */
         float value = get_duty();
-        uint8_t data[4];
-        memcpy(data,&value,sizeof(value));
-        CAN_Send(CAN_ID_SLAVE_FEEDBACK,sizeof(value),data);
-        PeriodicControl_Run(&pct);
-
+        memcpy(d, &value, sizeof(value));
+        CAN_Send(CAN_ID_EXT, CAN_ID_SLAVE_FEEDBACK, sizeof(value), d);
+        osDelay(10);
 #endif
     }
 }
@@ -161,6 +155,7 @@ static void vofa_rx_task(void *arg)
         if (osMessageQueueGet(vofa_cmd_queue, &ctrl, NULL, osWaitForever) != osOK)
             continue;
 
+        s_period_code = ctrl.period_code;
         update_breath_led_control(ctrl.onoff);
         update_breath_led_period((uint16_t)ctrl.period_code * 100u);
 

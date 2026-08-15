@@ -19,12 +19,15 @@ void CAN_Start(void)
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
 }
 
-void CAN_Send(uint32_t ext_id, uint8_t dlc, uint8_t *data)
+void CAN_Send(uint32_t ide, uint32_t id, uint8_t dlc, uint8_t *data)
 {
     CAN_TxHeaderTypeDef tx = {0};
     uint32_t mailbox = 0;
-    tx.IDE = CAN_ID_EXT;
-    tx.ExtId = ext_id;
+    tx.IDE = ide;
+    if (ide == CAN_ID_STD)
+        tx.StdId = id;
+    else
+        tx.ExtId = id;
     tx.DLC = dlc;
     tx.RTR = CAN_RTR_DATA;
     tx.TransmitGlobalTime = DISABLE;
@@ -47,14 +50,10 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
     memcpy(Msg.data,data,8);
     Msg.dlc=rx.DLC;
     Msg.ide=rx.IDE;
-    if(rx.IDE == 0)
-    {
-        Msg.id=rx.StdId;
-    }
-    if(rx.IDE == 1)
-    {
-        Msg.id=rx.ExtId;
-    }
+    if (rx.IDE == CAN_ID_STD)
+        Msg.id = rx.StdId;
+    else
+        Msg.id = rx.ExtId;
     osMessageQueuePut(can_rx_queue, &Msg, 0, 0);
 
 }

@@ -31,7 +31,7 @@ void can_app_run(void)
         else
             flow_led_off();
         uint8_t d[3] = {'O', 'K', s_flow_on}; /* 填OK+状态 */
-        CAN_Send(0x02010201U, 3, d);
+        CAN_Send(CAN_ID_EXT, 0x02010201U, 3, d);
     }
     if (can_beep_cnt > 0 && s_state == CAN_APP_IDLE)
     {
@@ -51,7 +51,7 @@ void can_app_run(void)
             HAL_Delay(150u);
         }
         uint8_t d[2] = {'O', 'K'};
-        CAN_Send(0x02010101U, 2, d);
+        CAN_Send(CAN_ID_EXT, 0x02010101U, 2, d);
         s_state = CAN_APP_IDLE;
     }
 
