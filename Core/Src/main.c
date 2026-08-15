@@ -34,6 +34,12 @@
 #include <string.h>
 #include "can_irq.h"
 #include "can_app.h"
+#include "protocol.h"
+#include "can_irq.h"
+#include "uart_irq.h"
+#include "buzzer.h"
+#include "led_flow.h"
+#include "breath_led.h"
 
 /* USER CODE END Includes */
 
@@ -67,20 +73,6 @@ void MX_FREERTOS_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-static void UART_Send_Sine(void)
-{
-  uint8_t frame[8];
-  float val = sinf(2.0f * 3.14f * (HAL_GetTick() % 2000) / 2000.0f);
-
-  memcpy(&frame[0], &val, 4);
-  frame[4] = 0x00;
-  frame[5] = 0x00;
-  frame[6] = 0x80;
-  frame[7] = 0x7F;
-
-  HAL_UART_Transmit(&huart1, frame, sizeof(frame), 100);
-}
 
 /* USER CODE END 0 */
 
