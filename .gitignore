@@ -20,3 +20,6 @@ MDK-ARM/*.uvguix.*
 
 # CubeMX 本地文件
 .mxproject
+
+# VS Code workspace settings
+.vscode/
