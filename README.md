@@ -1,6 +1,9 @@
 # 0811_stm32f4 — 结课作业:FreeRTOS + CAN 主从板通信系统
 
-两人一组、合作完成的结课作业。**同一套工程代码**,通过 `BOARD_MASTER` 宏在主/从板之间切换,两人分别在 `user/` 里各自的模块上开发。
+两人一组、合作完成的结课作业。**同一套工程代码**,通过 `BOARD_MASTER` 宏在主/从板之间切换,分别编译、分别烧录两块板。
+
+> ✅ **当前状态:全部需求已实现。**
+> 功能链路:主板收 VOFA 指令 → CAN 控制主/从板呼吸灯启停与快慢;从板 100Hz 反馈 float 到主板打波 + log;主从板接收 CANABLE 报文蜂鸣定次响应;双流水灯作工作状态指示。
 
 ## 一、结课作业需求(原题)
 
@@ -34,9 +37,9 @@
 | PA8 | BEEP | 蜂鸣器,高电平响 |
 | PA9 | USART1_TX | 串口(VOFA 上位机) |
 | PA10 | USART1_RX | 串口(VOFA 上位机) |
-| PA11 | CAN1_RX | CAN 总线接收 |
-| PA12 | CAN1_TX | CAN 总线发送 |
-| PC11 | INPUT_1 | 按键(EXTI,旧功能,可保留/移除) |
+| PA11 | CAN1_RX | CAN 控制器接收(需外接 CAN 收发器) |
+| PA12 | CAN1_TX | CAN 控制器发送(需外接 CAN 收发器) |
+| PC11 | INPUT_1 | 按键(EXTI,旧功能,未使用) |
 
 ### 外设参数
 
@@ -46,7 +49,8 @@
 | USART1 | 115200, 8N1,DMA + IDLE 变长接收 |
 | TIM3 | 1kHz PWM(CH1/CH2 → 呼吸灯) |
 | TIM1 | HAL 时基(1ms tick,供 `HAL_GetTick`) |
-| TIM2 | 预留(500Hz 更新中断,当前未用) |
+| TIM2 | 预留,当前未用 |
+
 
 ## 三、主从板切换 —— 最重要的一处
 
@@ -63,9 +67,8 @@ user/inc/protocol.h:
 - `BOARD_MASTER == 0` → **从板**:100Hz 反馈 float、收主板指令控呼吸灯
 
 代码里所有主从分支都写在 `#if BOARD_MASTER / #else / #endif` 里
-(见 `user/src/app_tasks.c`、`user/src/app_tasks.h`)。
+(见 `user/src/app_tasks.c`、`user/src/app_tasks.h`、`Core/Src/can.c` 过滤器)。
 
-> ⚠️ 两个开发者各自编译前,请确认自己板子上的 `BOARD_MASTER` 值。
 
 ## 四、工程结构
 
@@ -78,7 +81,7 @@ user/inc/protocol.h:
 │       ├── main.c                # 入口:外设初始化 + 启动 FreeRTOS
 │       ├── can.c                 # CAN1 初始化 + 过滤器(★ 主从过滤在此改)
 │       ├── usart.c               # USART1 初始化 + DMA 收发通道
-│       ├── freertos.c            # RTOS 初始化(目前只有 defaultTask)
+│       ├── freertos.c            # RTOS 初始化(调用 app_tasks_create 创建任务/队列)
 │       ├── dma.c / tim.c / gpio.c / stm32f4xx_it.c / system_stm32f4xx.c
 ├── Middlewares/Third_Party/FreeRTOS/   # FreeRTOS 内核
 ├── Drivers/                      # HAL 库 + CMSIS
@@ -87,26 +90,27 @@ user/inc/protocol.h:
     ├── inc/
     │   ├── protocol.h            # ★ 协议定义 + BOARD_MASTER 宏(唯一配置入口)
     │   ├── app_tasks.h / .c      # ★ FreeRTOS 任务 + 队列(主从分支)
-    │   ├── can_app.h / .c        # CAN 应用状态机(蜂鸣/流水)
     │   ├── can_irq.h / .c        # CAN 收发封装 + 接收中断回调
-    │   ├── uart_irq.h / .c       # UART 接收(待改成 A5..5A VOFA 协议)
-    │   ├── app.h / .c            # 旧按键状态机(按键控流水/呼吸,可选保留)
+    │   ├── can_app.h / .c        # CAN 应用状态机(死代码,未被调用)
+    │   ├── uart_irq.h / .c       # UART:VOFA A5..5A 指令解析 + justfloat 打波 + log
+    │   ├── app.h / .c            # 旧按键状态机(死代码,未被调用)
     │   ├── breath_led.h / .c     # 呼吸灯 PWM 驱动
     │   ├── led_flow.h / .c       # 流水灯驱动
     │   ├── buzzer.h / .c         # 蜂鸣器(非阻塞)
-    │   └── button.h / .c         # 按键(旧)
+    │   └── button.h / .c         # 按键(旧,未使用)
 ```
 
 ## 五、软件架构:FreeRTOS 任务与队列
 
-`user/src/app_tasks.c` 已定义好任务骨架与队列句柄,任务逻辑待填充:
+`user/src/app_tasks.c` 定义全部任务,`app_tasks_create()` 在
+`MX_FREERTOS_Init()` 中调用([freertos.c:98](Core/Src/freertos.c#L98)):
 
 | 任务 | 职责 | 主从 |
 |---|---|---|
 | `heartbeat_task` | LED1/2 交替闪烁,板子工作状态指示(需求 1) | 双板 |
-| `breath_task` | 呼吸灯占空比周期刷新(周期可调) | 双板 |
+| `breath_task` | 按状态刷新呼吸灯占空比(状态机分发开/关) | 双板 |
 | `buzzer_task` | 蜂鸣器定次数响应 | 双板 |
-| `can_rx_task` | CAN 接收处理(主从不同) | 双板 |
+| `can_rx_task` | CAN 接收处理(蜂鸣命令/主板收 float/从板收控制) | 双板 |
 | `can_tx_task` | CAN 周期发送:主板每 50ms 发 0x012;从板每 10ms 发 100Hz float | 双板 |
 | `vofa_rx_task` | VOFA 指令解析(仅主板) | 主板 |
 
@@ -119,82 +123,56 @@ user/inc/protocol.h:
 | `vofa_cmd_queue` | VOFA 指令投递给 vofa_rx_task | 仅主板 |
 
 启动流程(main.c):HAL 初始化 → 各 `MX_*_Init()` → `app_init` / `can_app_init` / `CAN_Start`
-→ `osKernelInitialize()` → `MX_FREERTOS_Init()` → `osKernelStart()`。
-
-> ⚠️ 当前 `MX_FREERTOS_Init()` 里只创建了 `defaultTask`,`app_tasks_create()`
-> **还没有被调用**——任务骨架写好了但还没接线。把 `app_tasks_create()` 加进
-> `MX_FREERTOS_Init()` 的 `RTOS_QUEUES/RTOS_THREADS` 区即可。
+→ `osKernelInitialize()` → `MX_FREERTOS_Init()`(内部 `app_tasks_create()`)→ `osKernelStart()`。
 
 ## 六、通信协议
 
-### 1. VOFA → 主板(串口 USART1,待实现)
+### 1. VOFA → 主板(串口 USART1,115200)
 
 ```
-A5  XX  XX  5A
-└─  ┌┘  ┌┘   └─ 帧尾
-    │   └────── 呼吸周期(调快慢)
-    └────────── 开/关(如 0x01=开, 0x00=关)
+A5  XX  XX  XX  5A
+└─  ┌┘  ┌┘   ┌┘  └─ 帧尾
+    │   │    └────── 保留(示例中为周期第二字节,当前未使用)
+    │   └─────────── 呼吸周期码(周期 = 周期码 × 100ms,限幅 100~2000ms)
+    └─────────────── 开/关(0x01=开, 0x00=关)
 ```
-主板收到后解析,决定本地呼吸灯状态,并经 CAN 下发从板。
+
+主板收到后:更新本地呼吸灯状态(立即生效),经 CAN 0x012 转发给从板,并在串口 log 输出
+`breath=xx period=xxxms`。
 
 ### 2. CAN 帧(当前代码中的 ID)
 
-`can_irq.c` 收发封装与接收回调,`can.c` 过滤器:
+| 方向 | 帧类型 | ID | 含义 | 负载 |
+|---|---|---|---|---|
+| 主板 → 从板 | 标准帧 | `0x012` | 呼吸控制,每 50ms | data[0]=开关, data[1]=周期码 |
+| 从板 → 主板 | 扩展帧 | `0x02010101` | 100Hz float 反馈,每 10ms | data[0..3]=float 占空比 |
+| CANABLE → 双板 | 扩展帧 | `0x01020101` | 蜂鸣器定次数响应 | data[0]=次数 |
 
-| 方向 | ID(扩展帧) | 含义 | 备注 |
-|---|---|---|---|
-| 收 | `0x01020101` | 蜂鸣器响次数 | data[0]=次数 |
-| 收 | `0x01020201` | 流水灯开关 | data[0]=0/1 |
-| 发 | `0x02010101` | 蜂鸣完成 OK | can_app.c |
-| 发 | `0x02010201` | 流水开关 OK | can_app.c |
+**CAN 过滤器**(can.c, FilterBank=0, IDLIST 模式)按板别放行:
 
-CAN 过滤器(can.c,FilterBank=0, IDLIST 模式)当前只放行 `0x01020101`、`0x01020201` 两个扩展帧。
+| 板别 | 放行 ID |
+|---|---|
+| 主板(`BOARD_MASTER=1`) | `0x02010101`(从板反馈) + `0x01020101`(蜂鸣) |
+| 从板(`BOARD_MASTER=0`) | `0x012`(主板控制) + `0x01020101`(蜂鸣) |
 
-> ⚠️ **作业要求 vs 当前代码的 ID 差异,需两人最终对齐:**
-> 作业要求主/从板分别发 **0x012** 与 **0x02010101**(并被对方过滤),
-> 而当前代码用的是 0x01020101 / 0x01020201 / 0x02010201 等。定稿协议时
-> 请把 `can_irq.c`、`can_app.c`、`can.c` 过滤器三处一起改,保持一致。
-
-### 3. 从板 → 主板 100Hz float(待实现)
-
-从板 `can_tx_task` 每 10ms 发一帧 CAN,负载放 1 个 float(小端);
-主板 `can_rx_task` 收到后提取 float,经 USART 打到 VOFA 波形图并 log。
+> 过滤器在硬件层丢弃未放行的 ID,因此 500Hz 噪声帧不会进入软件、不丢功能(需求 5)。
+> 从板打波:100Hz float 经 CAN 到主板后,主板用 justfloat 协议
+> (`00 00 80 7F` 帧尾)打到 VOFA 波形图。
 
 ## 七、模块职责与完成状态
 
 | 模块 | 文件 | 职责 | 状态 |
 |---|---|---|---|
-| CAN 硬件 + 过滤器 | `Core/Src/can.c` | CAN1 1Mbps、过滤器配置 | ✅ 完成 |
-| CAN 收发 + 中断 | `user/src/can_irq.c` | `CAN_Send`/`CAN_Start`、RX 回调解析 | ✅ 完成 |
-| CAN 应用状态机 | `user/src/can_app.c` | 蜂鸣定次数、流水开关,回复 OK 帧 | 🟡 部分(阻塞式蜂鸣) |
-| FreeRTOS 任务骨架 | `user/src/app_tasks.c` | 任务/队列定义与分支 | 🟡 骨架,未创建 |
-| VOFA 指令 A5..5A | `user/src/uart_irq.c` | 主板解析指令 | ❌ 未做(还是旧协议) |
-| 从板 100Hz float | 待开发 | 从板反馈 float | ❌ 未做 |
-| 0x012 / 0x02010101 周期发送 | 待开发 | 主从周期报文 | ❌ 未做 |
+| CAN 硬件 + 过滤器 | `Core/Src/can.c` | CAN1 1Mbps、主从过滤器 | ✅ 完成 |
+| CAN 收发 + 中断 | `user/src/can_irq.c` | `CAN_Send`/`CAN_Start`、RX 回调 → 队列 | ✅ 完成 |
+| FreeRTOS 任务 + 队列 | `user/src/app_tasks.c` | 6 个任务 + 3 队列,主从分支 | ✅ 完成 |
+| VOFA 指令 A5..5A | `user/src/uart_irq.c` | 指令解析、justfloat 打波、log | ✅ 完成 |
+| 主/从板周期报文 | `app_tasks.c` `can_tx_task` | 0x012 / 0x02010101 周期发送 | ✅ 完成 |
+| 蜂鸣定次响应 | `app_tasks.c` `buzzer_task` + `can_rx_task` | CANABLE 命令 → 响 N 次 | ✅ 完成 |
 | 流水灯状态指示 | `user/src/led_flow.c` | LED1/2 交替 | ✅ 完成 |
-| 呼吸灯 PWM | `user/src/breath_led.c` | TIM3 占空比三角波 | ✅ 完成 |
+| 呼吸灯 PWM | `user/src/breath_led.c` | TIM3 占空比三角波,周期可调 | ✅ 完成 |
 | 蜂鸣器 | `user/src/buzzer.c` | 非阻塞定次 | ✅ 完成 |
-| 旧按键状态机 | `user/src/app.c` | 按键控流水/呼吸(旧功能) | 🟡 与 RTOS 呼吸任务可能冲突,决定去留 |
+| CAN 应用状态机 | `user/src/can_app.c` | 旧状态机(阻塞式) | ⚠️ 死代码,未被调用 |
+| 旧按键状态机 | `user/src/app.c` / `button.c` | 按键控流水/呼吸 | ⚠️ 死代码,未被调用 |
 
-## 八、开发分工建议
 
-| 开发者 | 负责模块 | 主要工作 |
-|---|---|---|
-| **主板开发者** | `vofa_rx_task`、`can_tx_task`、`can_rx_task` | 解析 A5..5A 指令 → 下发 CAN;每 50ms 发 0x012;收从板 float 打波到 VOFA + log |
-| **从板开发者** | `can_tx_task`、`can_rx_task`、`breath_task` | 每 10ms 发 100Hz float;收主板指令控呼吸灯;呼吸周期可调 |
-| **共同** | `can_irq.c`、`can_app.c`、`can.c` 过滤器 | 定稿 CAN ID、蜂鸣定次数响应、确认过滤配置一致 |
-
-**改 `protocol.h` 里的 `BOARD_MASTER` 即可在自己板子上开发对应一侧。**
-
-## 九、当前注意事项 / 待办
-
-1. **旧超级循环是死代码**:`osKernelStart()` 之后 `main.c` 里 `while(1)` 中的
-   `app_run()` / `can_app_run()` / `UART_Send_Sine()` 在 RTOS 跑起来后**不会执行**。
-   这些逻辑要迁移进 FreeRTOS 任务(app_tasks.c),而不是留在 while 里。
-2. **`uart_irq.c` 接收未重启**:`HAL_UARTEx_RxEventCallback` 末尾重装接收的那行被注释掉了,
-   需恢复 `HAL_UARTEx_ReceiveToIdle_DMA(...)`,否则只收到一帧就停了。
-3. **VOFA 协议待重写**:`uart_irq.c` 目前还是旧的 `0xFF/0x01` 协议,要改成 `A5..5A`。
-4. **CAN 过滤器待更新**:定稿 ID 后同步改 `can.c` 的 FilterBank 0 配置。
-5. **`app_tasks_create()` 未接线**:在 `freertos.c` 的 `MX_FREERTOS_Init()` 中调用它来创建任务与队列。
-6. **`freertos.c` include 不一致**:当前 `#include "cmsis_os.h"`(V1),但任务代码用 V2 API
-   (`cmsis_os2.h`),建议统一为 V2 头文件。
