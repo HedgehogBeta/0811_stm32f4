@@ -8,7 +8,7 @@
 
 /* ============ 配置切换 ============ */
 #ifndef BOARD_MASTER
-#define BOARD_MASTER  1    /* 1=主板, 0=从板 */
+#define BOARD_MASTER  0    /* 1=主板, 0=从板 */
 #endif
 
 #include "main.h"
