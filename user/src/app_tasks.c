@@ -7,13 +7,15 @@
 #include "breath_led.h"
 #include <string.h>
 #include <stdio.h>
-#include "portmacro.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
 typedef struct 
 {
     TickType_t last_wake_time;
     TickType_t period;
      /* data */
-}PeriodicControl_t;;
+}PeriodicControl_t;
 
 
 static void PeriodicControl_Init(PeriodicControl_t *control, uint32_t period_ms)
@@ -79,7 +81,7 @@ static void buzzer_task(void *arg)
         {
             buzzer_beep(150u);
             osDelay(150u);
-            buzzer_update;
+            buzzer_update();
             osDelay(150u);
         }
         buzzer_off();

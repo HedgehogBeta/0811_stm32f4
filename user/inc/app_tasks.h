@@ -5,6 +5,7 @@
 #include "cmsis_os2.h"
 #include "protocol.h"
 
+
 /* ============ 队列句柄(供中断/任务投递) ============ */
 extern osMessageQueueId_t can_rx_queue;   /* CAN 接收消息队列 */
 extern osMessageQueueId_t beep_queue;     /* 蜂鸣请求队列 */
