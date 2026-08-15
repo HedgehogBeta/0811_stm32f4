@@ -16,15 +16,14 @@ static uint32_t Breath_Period_Ms = MAX_BREATH_PERIOD_MS;
 static uint8_t Breath_Led_State = 0;
 
 
-static limit_uint32_t(uint32_t data,uint32_t max,uint32_t min)
+static uint32_t limit_uint32_t(uint32_t data, uint32_t max, uint32_t min)
 {
-    if(data>max)
-    return max;
-    else if(data<min)
-    return min;
+    if (data > max)
+        return max;
+    else if (data < min)
+        return min;
     else
-    return data;
-
+        return data;
 }
 
 static uint32_t get_breath_led_period(void)
@@ -57,8 +56,9 @@ void breath_led_control(void)
 
 void update_breath_led_period(uint32_t new_breath_led_period)
 {
-    Breath_Period_Ms=limit_uint32_t(new_breath_led_period,MAX_BREATH_PERIOD_MS,0);
-
+    if (new_breath_led_period == 0u)
+        return;   /* 拒绝 0,防止 breath_led_update 里 %0 除零崩溃 */
+    Breath_Period_Ms = limit_uint32_t(new_breath_led_period, MAX_BREATH_PERIOD_MS, 100u);
 }
 
 void breath_led_init(void)
