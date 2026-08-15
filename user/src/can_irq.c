@@ -17,6 +17,7 @@ void CAN_Start(void)
 {
     HAL_CAN_Start(&hcan1);
     HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING);
+    
 }
 
 void CAN_Send(uint32_t ide, uint32_t id, uint8_t dlc, uint8_t *data)

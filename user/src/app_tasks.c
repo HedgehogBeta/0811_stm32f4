@@ -33,8 +33,7 @@ static void PeriodicControl_Run(PeriodicControl_t *control)
 osMessageQueueId_t can_rx_queue;
 osMessageQueueId_t beep_queue;
 #if BOARD_MASTER
-osMessageQueueI
-    d_t vofa_cmd_queue; /* 仅主板 */
+osMessageQueueId_t vofa_cmd_queue; /* 仅主板 */
 #endif
 
 static uint8_t s_period_code = 1;  /* 主板最近一次 VOFA 周期码,供 CAN 转发给从板 */
@@ -160,7 +159,6 @@ static void vofa_rx_task(void *arg)
         s_period_code = ctrl.period_code;
         update_breath_led_control(ctrl.onoff);
         update_breath_led_period((uint16_t)ctrl.period_code * 100u);
-        breath_led_control();
 
         int len = snprintf(line, sizeof(line), "breath=%d period=%dms\r\n",
                            ctrl.onoff, (int)((uint16_t)ctrl.period_code * 100u));

@@ -12,7 +12,7 @@
 #define MAX_BREATH_PERIOD_MS    2000u   /* 一个呼吸周期(暗->亮->暗) */
 #define PWM_MAX             1000u   /* TIM3 计数周期 = ARR + 1 */
 float duty;
-static uint32_t Breath_Period_Ms = 0;
+static uint32_t Breath_Period_Ms = 1;
 static uint8_t Breath_Led_State = 0;
 
 
