@@ -20,7 +20,7 @@ void breath_led_off(void);    /* 占空比 0(灭) */
 void update_breath_led_control(uint8_t new_control);
 void breath_led_control(void);
 float get_duty(void);
-
+uint8_t get_breath_led_control(void);
 void update_breath_led_period(uint32_t new_breath_led_period);
 
 #ifdef __cplusplus
