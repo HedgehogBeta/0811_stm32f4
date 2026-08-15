@@ -16,16 +16,14 @@ typedef struct
 }PeriodicControl_t;;
 
 
-void PeriodicControl_Init(PeriodicControl_t *control, uint32_t period_ms)
+static void PeriodicControl_Init(PeriodicControl_t *control, uint32_t period_ms)
 {
     control->last_wake_time = xTaskGetTickCount();
     control->period = pdMS_TO_TICKS(period_ms);
 }
 
-void PeriodicControl_Run(PeriodicControl_t *control)
+static void PeriodicControl_Run(PeriodicControl_t *control)
 {
-    Control_Update();
-
     vTaskDelayUntil(&control->last_wake_time, control->period);
 }
 
@@ -44,13 +42,6 @@ static const osThreadAttr_t s_buzzer_attr = {.name = "buzzer", .stack_size = 256
 #if BOARD_MASTER
 static const osThreadAttr_t s_vofarx_attr = {.name = "vofa_rx", .stack_size = 384, .priority = osPriorityNormal};
 #endif
-
-
-
-void CAN_RX_Queue_Put(CanMsg_t* Msg)
-{
-    osMessageQueuePut(can_rx_queue,Msg,NULL,osWaitForever);
-}
 
 
 
@@ -119,17 +110,15 @@ static void can_rx_task(void *arg)
 
 #else
         /* 从板: 收0x012控呼吸 */
-        CAN_Start();
-        CanMsg_t Msg;
         BreathCtrl_t Ctrl_t;
-        osMessageQueueGet(can_rx_queue,&Msg,NULL,osWaitForever);
-        if(Msg.id == 0x012&&Msg.dlc>=1)
+        if(msg.id == 0x012&&msg.dlc>=1)
         {
-            Ctrl_t.onoff = Msg.data[0];
+            Ctrl_t.onoff = msg.data[0];
             update_breath_led_control(Ctrl_t.onoff);
-            Ctrl_t.period_code = Msg.data[1]*100+Msg.data[2];
+            Ctrl_t.period_code = msg.data[1]*100+msg.data[2];
             update_breath_led_period(Ctrl_t.period_code);     
         }
+
 
         breath_led_control();
         osDelay(10);
