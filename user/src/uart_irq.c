@@ -34,7 +34,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
         return;
 
 #if BOARD_MASTER
-    if (Size >= 4u && rx_buffer[0] == 0xA5u && rx_buffer[3] == 0x5Au) // 呼吸灯指令
+    if (Size >= 4u && rx_buffer[0] == 0xA5u && rx_buffer[4] == 0x5Au) // 呼吸灯指令
     {
         BreathCtrl_t ctrl;
         ctrl.onoff = rx_buffer[1];
