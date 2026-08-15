@@ -120,10 +120,6 @@ static void can_rx_task(void *arg)
             Ctrl_t.period_code = msg.data[1]*100+msg.data[2];
             update_breath_led_period(Ctrl_t.period_code);     
         }
-
-
-        breath_led_control();
-        osDelay(10);
 #endif
     }
 }
