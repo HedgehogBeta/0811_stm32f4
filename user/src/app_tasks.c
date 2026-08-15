@@ -124,8 +124,8 @@ static void can_rx_task(void *arg)
         {
             Ctrl_t.onoff = Msg.data[0];
             update_breath_led_control(Ctrl_t.onoff);
-            Ctrl_t.period = Msg.data[1]*100+Msg.data[2];
-            update_breath_led_period(Ctrl_t.period);     
+            Ctrl_t.period_code = Msg.data[1]*100+Msg.data[2];
+            update_breath_led_period(Ctrl_t.period_code);     
         }
 
         breath_led_control();
