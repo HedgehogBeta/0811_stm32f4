@@ -43,7 +43,7 @@ static void breath_task(void *arg)
 {
     for (;;)
     {
-        breath_led_update();
+        breath_led_control();
         osDelay(10);
     }
 }
