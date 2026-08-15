@@ -109,10 +109,13 @@ static void can_rx_task(void *arg)
         if (msg.ide == CAN_ID_EXT && msg.id == CAN_BEEP_ID_CMD && msg.dlc >= 1)
         {
             uint8_t n = msg.data[0];
-            osMessageQueuePut(beep_queue, &n, 0, 0); //入队
+            osMessageQueuePut(beep_queue, &n, 0, 0); // 入队
         }
 #if BOARD_MASTER
         /* 主板: 转发float打波 */
+        float val;
+        memcpy(&val, msg.data, 4);
+        UART_Send_Float(val);
 
 #else
         /* 从板: 收0x012控呼吸 */
@@ -141,8 +144,13 @@ static void can_tx_task(void *arg)
     PeriodicControl_Init(&pct,10);//防周期性漂移计时10ms
     for (;;)
     {
+        uint8_t d[4];
 #if BOARD_MASTER
         /* 主板: 每50ms发0x012 */
+        d[0] = get_breath_led_control();
+        d[1] = get_breath_led_period();
+        CAN_Send(CAN_ID_STD, CAN_ID_MASTER_CTRL, 2, d);
+        osDelay(50);
 #else
         /* 从板: 每10ms发100Hz float */
         float value = get_duty();
@@ -159,8 +167,19 @@ static void can_tx_task(void *arg)
 /* VOFA指令处理(仅主板) */
 static void vofa_rx_task(void *arg)
 {
+    BreathCtrl_t ctrl;
+    char line[32];
     for (;;)
     {
+        if (osMessageQueueGet(vofa_cmd_queue, &ctrl, NULL, osWaitForever) != osOK)
+            continue;
+
+        update_breath_led_control(ctrl.onoff);
+        update_breath_led_period((uint16_t)ctrl.period_code * 100u);
+
+        int len = snprintf(line, sizeof(line), "breath=%d period=%dms\r\n",
+                           ctrl.onoff, (int)((uint16_t)ctrl.period_code * 100u));
+        UART_Send_Log(line, (uint16_t)len);
     }
 }
 #endif
