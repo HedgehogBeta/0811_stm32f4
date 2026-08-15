@@ -7,6 +7,27 @@
 #include "breath_led.h"
 #include <string.h>
 #include <stdio.h>
+#include "portmacro.h"
+typedef struct 
+{
+    TickType_t last_wake_time;
+    TickType_t period;
+     /* data */
+}PeriodicControl_t;;
+
+
+void PeriodicControl_Init(PeriodicControl_t *control, uint32_t period_ms)
+{
+    control->last_wake_time = xTaskGetTickCount();
+    control->period = pdMS_TO_TICKS(period_ms);
+}
+
+void PeriodicControl_Run(PeriodicControl_t *control)
+{
+    Control_Update();
+
+    vTaskDelayUntil(&control->last_wake_time, control->period);
+}
 
 /* 队列句柄 */
 osMessageQueueId_t can_rx_queue;
@@ -23,6 +44,8 @@ static const osThreadAttr_t s_buzzer_attr = {.name = "buzzer", .stack_size = 256
 #if BOARD_MASTER
 static const osThreadAttr_t s_vofarx_attr = {.name = "vofa_rx", .stack_size = 384, .priority = osPriorityNormal};
 #endif
+
+
 
 /* 心跳: LED1/2 交替闪烁 */
 static void heartbeat_task(void *arg)
@@ -96,6 +119,21 @@ static void can_rx_task(void *arg)
             update_breath_led_control(msg.data[0]);   /* 开关 */
             update_breath_led_period((uint32_t)msg.data[1] * 100u);  /* 周期 */
         }
+        /* 从板: 收0x012控呼吸 */
+        CAN_Start();
+        CanMsg_t Msg;
+        BreathCtrl_t Ctrl_t;
+        osMessageQueueGet(can_rx_queue,&Msg,NULL,osWaitForever);
+        if(Msg.id == 0x012&&Msg.dlc>=1)
+        {
+            Ctrl_t.onoff = Msg.data[0];
+            update_breath_led_control(Ctrl_t.onoff);
+            Ctrl_t.period_code = Msg.data[1]*100+Msg.data[2];
+            update_breath_led_period(Ctrl_t.period_code);     
+        }
+
+        breath_led_control();
+        osDelay(10);
 #endif
     }
 }
@@ -103,6 +141,8 @@ static void can_rx_task(void *arg)
 /* CAN周期发送(主从分支) */
 static void can_tx_task(void *arg)
 {
+    PeriodicControl_t pct = {0};
+    PeriodicControl_Init(&pct,10);//防周期性漂移计时10ms
     for (;;)
     {
         uint8_t d[4];
@@ -114,6 +154,12 @@ static void can_tx_task(void *arg)
         osDelay(50);
 #else
         /* 从板: 每10ms发100Hz float */
+        float value = get_duty();
+        uint8_t data[4];
+        memcpy(data,&value,sizeof(value));
+        CAN_Send(CAN_ID_SLAVE_FEEDBACK,sizeof(value),data);
+        PeriodicControl_Run(&pct);
+
 #endif
     }
 }

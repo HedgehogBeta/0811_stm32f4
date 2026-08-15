@@ -8,7 +8,7 @@
 
 /* ============ 配置切换 ============ */
 #ifndef BOARD_MASTER
-#define BOARD_MASTER  1    /* 1=主板, 0=从板 */
+#define BOARD_MASTER  0    /* 1=主板, 0=从板 */
 #endif
 
 #include "main.h"
@@ -20,7 +20,7 @@
 
 typedef struct {
     uint8_t onoff;        /* 0=关 1=开 */
-    uint8_t period_code;  /* 周期码 */
+    uint32_t period_code;  /* 周期码 */
 } BreathCtrl_t;
 
 /* 从 CAN 中断投递到任务队列的一条消息 */
