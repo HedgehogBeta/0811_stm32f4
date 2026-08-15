@@ -138,6 +138,7 @@ static void vofa_rx_task(void *arg)
         s_period_code = ctrl.period_code;
         update_breath_led_control(ctrl.onoff);
         update_breath_led_period((uint16_t)ctrl.period_code * 100u);
+        breath_led_control();
 
         int len = snprintf(line, sizeof(line), "breath=%d period=%dms\r\n",
                            ctrl.onoff, (int)((uint16_t)ctrl.period_code * 100u));
