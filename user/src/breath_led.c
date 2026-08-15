@@ -9,10 +9,23 @@
 #include "breath_led.h"
 #include "tim.h"
 
-#define BREATH_PERIOD_MS    2000u   /* 一个呼吸周期(暗->亮->暗) */
+#define MAX_BREATH_PERIOD_MS    2000u   /* 一个呼吸周期(暗->亮->暗) */
 #define PWM_MAX             1000u   /* TIM3 计数周期 = ARR + 1 */
-static uint32_t Breath_Period_Ms = BREATH_PERIOD_MS;
+float duty;
+static uint32_t Breath_Period_Ms = MAX_BREATH_PERIOD_MS;
 static uint8_t Breath_Led_State = 0;
+
+
+uint32_t limit_uint32_t(uint32_t data,uint32_t max,uint32_t min)
+{
+    if(data>max)
+    return max;
+    else if(data<min)
+    return min;
+    else
+    return data;
+
+}
 
 static uint32_t get_breath_led_period(void)
 {
@@ -39,12 +52,8 @@ void breath_led_control(void)
 
 void update_breath_led_period(uint32_t new_breath_led_period)
 {
-    if(new_breath_led_period<=BREATH_PERIOD_MS)
-    Breath_Period_Ms = new_breath_led_period;
-    else
-    {   
-        Breath_Period_Ms=BREATH_PERIOD_MS;
-    }
+    Breath_Period_Ms=limit_uint32_t(new_breath_led_period,MAX_BREATH_PERIOD_MS,0);
+
 }
 
 void breath_led_init(void)
@@ -60,12 +69,12 @@ void breath_led_update(void)
 {
     uint32_t period = get_breath_led_period();
     uint32_t phase = HAL_GetTick() % period;
-    uint32_t duty;
+
 
     if (phase <= (period / 2u)) {
-        duty = (phase * 2u * PWM_MAX) / period;
+        duty = (float)(phase * 2u * PWM_MAX) / (float)period;
     } else {
-        duty = ((period - phase) * 2u * PWM_MAX) / period;
+        duty = (float)((period - phase) * 2u * PWM_MAX) / (float)period;
     }
 
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, duty);
@@ -76,4 +85,9 @@ void breath_led_off(void)
 {
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0u);
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_2, 0u);
+}
+
+float get_duty(void)
+{
+    return duty;
 }

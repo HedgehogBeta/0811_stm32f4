@@ -7,6 +7,27 @@
 #include "breath_led.h"
 #include <string.h>
 #include <stdio.h>
+#include "portmacro.h"
+typedef struct 
+{
+    TickType_t last_wake_time;
+    TickType_t period;
+     /* data */
+}PeriodicControl_t;;
+
+
+void PeriodicControl_Init(PeriodicControl_t *control, uint32_t period_ms)
+{
+    control->last_wake_time = xTaskGetTickCount();
+    control->period = pdMS_TO_TICKS(period_ms);
+}
+
+void PeriodicControl_Run(PeriodicControl_t *control)
+{
+    Control_Update();
+
+    vTaskDelayUntil(&control->last_wake_time, control->period);
+}
 
 /* 队列句柄 */
 osMessageQueueId_t can_rx_queue;
@@ -30,6 +51,7 @@ void CAN_RX_Queue_Put(CanMsg_t* Msg)
 {
     osMessageQueuePut(can_rx_queue,Msg,NULL,osWaitForever);
 }
+
 
 
 /* 心跳: LED1/2 交替闪烁 */
@@ -115,12 +137,20 @@ static void can_rx_task(void *arg)
 /* CAN周期发送(主从分支) */
 static void can_tx_task(void *arg)
 {
+    PeriodicControl_t pct = {0};
+    PeriodicControl_Init(&pct,10);//防周期性漂移计时10ms
     for (;;)
     {
 #if BOARD_MASTER
         /* 主板: 每50ms发0x012 */
 #else
         /* 从板: 每10ms发100Hz float */
+        float value = get_duty();
+        uint8_t data[4];
+        memcpy(data,&value,sizeof(value));
+        CAN_Send(CAN_ID_SLAVE_FEEDBACK,sizeof(value),data);
+        PeriodicControl_Run(&pct);
+
 #endif
     }
 }
