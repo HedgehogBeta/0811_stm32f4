@@ -16,6 +16,5 @@ extern osMessageQueueId_t vofa_cmd_queue; /* VOFA 指令队列(仅主板) */
 #endif
 
 void app_tasks_create(void);   /* 创建所有任务与队列 */
-void CAN_RX_Queue_Put(CanMsg_t* Msg);
 
 #endif /* __APP_TASKS_H */

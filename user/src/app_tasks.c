@@ -104,12 +104,12 @@ static void can_rx_task(void *arg)
             uint8_t n = msg.data[0];
             osMessageQueuePut(beep_queue, &n, 0, 0); // 入队
         }
-#if BOARD_MASTER
-        /* 主板: 转发float打波 */
-        float val;
-        memcpy(&val, msg.data, 4);
-        UART_Send_Float(val);
-
+#if BOARD_MASTER        /* 主板: 收到从板 100Hz float → 打波到 VOFA */
+        else if (msg.ide == CAN_ID_EXT && msg.id == CAN_ID_SLAVE_FEEDBACK && msg.dlc >= 4) {
+            float val;
+            memcpy(&val, msg.data, 4);
+            UART_Send_Float(val);
+        }
 #else
         /* 从板: 收0x012控呼吸 */
         BreathCtrl_t Ctrl_t;
