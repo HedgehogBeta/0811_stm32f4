@@ -141,9 +141,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-    UART_Send_Sine();
-    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }
