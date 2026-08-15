@@ -34,6 +34,12 @@
 #include <string.h>
 #include "can_irq.h"
 #include "can_app.h"
+#include "protocol.h"
+#include "can_irq.h"
+#include "uart_irq.h"
+#include "buzzer.h"
+#include "led_flow.h"
+#include "breath_led.h"
 
 /* USER CODE END Includes */
 
@@ -128,8 +134,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-    UART_Send_Sine();
-    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }

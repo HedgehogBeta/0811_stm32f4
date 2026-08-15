@@ -1022,6 +1022,11 @@
               <FileType>1</FileType>
               <FilePath>..\user\src\can_irq.c</FilePath>
             </File>
+            <File>
+              <FileName>app_tasks.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\src\app_tasks.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
